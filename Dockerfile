@@ -10,22 +10,18 @@ ADD packages/${VERTICA_PACKAGE} /tmp/
 
 RUN yum -q -y update \
   && yum -q -y install \
-    curl \
+    iproute \
+    openssl \
     gdb \
     mcelog \
     openssh \
-    openssl \
     sysstat \
-    which \
-    m4 \
-    sendmail \
-    sendmail-cf
+    which
 
-RUN  /usr/bin/curl -o /usr/local/bin/gosu -SL 'https://github.com/tianon/gosu/releases/download/1.1/gosu' \
-  &&/bin/chmod +x /usr/local/bin/gosu \
-  && /usr/sbin/groupadd -r verticadba \
+RUN  /usr/sbin/groupadd -r verticadba \
   && /usr/sbin/useradd -r -m -s /bin/bash -g verticadba dbadmin \
-  && /usr/local/bin/gosu dbadmin mkdir /tmp/.python-eggs
+  && mkdir /tmp/.python-eggs \
+  && chown -R dbadmin:verticadba /tmp/.python-eggs
 
 RUN yum localinstall -q -y /tmp/${VERTICA_PACKAGE}
 
