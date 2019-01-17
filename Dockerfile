@@ -32,7 +32,8 @@ RUN /opt/vertica/sbin/install_vertica --license CE --accept-eula --hosts 127.0.0
 ENV PYTHON_EGG_CACHE=/tmp/.python-eggs \
   VERTICADATA=/home/dbadmin/docker
 VOLUME /home/dbadmin/docker
-ENTRYPOINT ["/opt/vertica/bin/docker-entrypoint.sh"]
-ADD ./docker-entrypoint.sh /opt/vertica/bin/
+
+ENTRYPOINT ["/opt/vertica/bin/create_db.sh"]
+ADD ./create_db.sh /opt/vertica/bin/
 
 EXPOSE 5433
