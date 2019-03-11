@@ -1,68 +1,61 @@
 #!/bin/bash
 set -e
 
-STOP_LOOP="false"
-
-# Vertica should be shut down properly
+#################################
+# Handle exit                   #
+#################################
 function shut_down() {
-  echo "Shutting Down"
-  vertica_proper_shutdown
-  echo 'Saving configuration'
-  mkdir -p ${VERTICADATA}/config
-  /bin/cp /opt/vertica/config/admintools.conf ${VERTICADATA}/config/admintools.conf
-  echo 'Stopping loop'
-  STOP_LOOP="true"
+    echo ""
+    echo "Bye!"
+    exit 0
 }
-
-function vertica_proper_shutdown() {
-  echo 'Vertica: Closing active sessions'
-  /bin/su - dbadmin -c '/opt/vertica/bin/vsql -U dbadmin -d dw_docker_1 -c "SELECT CLOSE_ALL_SESSIONS();"'
-  echo 'Vertica: Flushing everything on disk'
-  /bin/su - dbadmin -c '/opt/vertica/bin/vsql -U dbadmin -d dw_docker_1 -c "SELECT MAKE_AHM_NOW();"'
-  echo 'Vertica: Stopping database'
-  /bin/su - dbadmin -c '/opt/vertica/bin/admintools -t stop_db -d dw_docker_1 -i'
-}
-
-function fix_filesystem_permissions() {
-  chown -R dbadmin:verticadba "${VERTICADATA}"
-  chown dbadmin:verticadba /opt/vertica/config/admintools.conf
-}
-
 trap "shut_down" SIGKILL SIGTERM SIGHUP SIGINT
 
 
-echo 'Starting up'
-if [ -z "$(ls -A "${VERTICADATA}")" ]; then
-  echo 'Fixing filesystem permissions'
-  fix_filesystem_permissions
-  echo 'Creating database'
-  su - dbadmin -c "/opt/vertica/bin/admintools -t create_db --skip-fs-checks -s localhost -d dw_docker_1 -c ${VERTICADATA}/catalog -D ${VERTICADATA}/data"
-else
-  if [ -f ${VERTICADATA}/config/admintools.conf ]; then
-    echo 'Restoring configuration'
-    cp ${VERTICADATA}/config/admintools.conf /opt/vertica/config/admintools.conf
-  fi
-  echo 'Fixing filesystem permissions'
-  fix_filesystem_permissions
-  echo 'Starting Database'
-  su - dbadmin -c '/opt/vertica/bin/admintools -t start_db -d dw_docker_1 -i'
+#################################
+# Create and Start the Database #
+#################################
+
+# Set Database Name (Default 'docker')
+if [ -z $DBNAME ]; then
+    DBNAME=docker
 fi
 
-echo
+# Command to Create and Start the Database
+CREATE_DB="/opt/vertica/bin/admintools -t create_db --skip-fs-checks -s localhost -d $DBNAME "
+
+# Create DB with password if DBPASSWD environment variable is set
+if [[ -n $DBPASSWD ]]; then
+    CREATE_DB="${CREATE_DB} -p ${DBPASSWD}"
+fi
+
+# Execute create_db command
+echo "Creating database"
+su - dbadmin -c "${CREATE_DB}"
+echo ""
+echo "Vertica is now running..."
+
+
+#################################
+# Docker Entrypoint initdb.d    #
+#################################
 if [ -d /docker-entrypoint-initdb.d/ ]; then
-  echo "Running entrypoint scripts ..."
-  for f in $(ls /docker-entrypoint-initdb.d/* | sort); do
-    case "$f" in
-      *.sh)     echo "$0: running $f"; . "$f" ;;
-      *.sql)    echo "$0: running $f"; su - dbadmin -c "/opt/vertica/bin/vsql -d dw_docker_1 -f $f"; echo ;;
-      *)        echo "$0: ignoring $f" ;;
-    esac
-   echo
-  done
+    echo "Running entrypoint scripts ..."
+    for f in $(ls /docker-entrypoint-initdb.d/* | sort); do
+        case "$f" in
+            *.sh)     echo "$0: running $f"; . "$f" ;;
+            *.sql)    echo "$0: running $f"; su - dbadmin -c "/opt/vertica/bin/vsql -d $DBNAME -f $f"; echo ;;
+            *)        echo "$0: ignoring $f" ;;
+        esac
+        echo
+    done
+    echo "All docker-entrypoint-initdb.d scripts executed..."
 fi
 
-echo "Vertica is now running"
 
-while [ "${STOP_LOOP}" == "false" ]; do
+#################################
+# Keep Container Active    #
+#################################
+while true; do
   sleep 1
 done
