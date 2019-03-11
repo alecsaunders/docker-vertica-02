@@ -29,6 +29,18 @@ if [[ -n $DBPASSWD ]]; then
     CREATE_DB="${CREATE_DB} -p ${DBPASSWD}"
 fi
 
+if [[ -n $CATALOGPATH ]]; then
+    mkdir -p $CATALOGPATH
+    chown -R dbadmin: $CATALOGPATH
+    CREATE_DB="${CREATE_DB} --catalog_path ${CATALOGPATH}"
+fi
+
+if [[ -n $DATAPATH ]]; then
+    mkdir -p $DATAPATH
+    chown -R dbadmin: $DATAPATH
+    CREATE_DB="${CREATE_DB} --data_path ${DATAPATH}"
+fi
+
 # Execute create_db command
 echo "Creating database"
 su - dbadmin -c "${CREATE_DB}"
