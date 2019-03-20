@@ -23,7 +23,9 @@ RUN /opt/vertica/sbin/install_vertica --license CE --accept-eula --hosts 127.0.0
   --dba-user-password-disabled --failure-threshold NONE --no-system-configuration \
   && /bin/rm -f /tmp/vertica*
 
-ENV PATH="/opt/vertica/bin:/opt/vertica/packages/kafka/bin:${PATH}"
+ENV PATH=/opt/vertica/bin:/opt/vertica/packages/kafka/bin:${PATH}
+RUN echo "export PATH=/opt/vertica/bin:/opt/vertica/packages/kafka/bin:${PATH}" >> /home/dbadmin/.bashrc
+RUN chown -R dbadmin: /opt/vertica
 
 ADD --chown=root:root ./create_db.sh /opt/vertica/bin/
 ENTRYPOINT ["/opt/vertica/bin/create_db.sh"]
