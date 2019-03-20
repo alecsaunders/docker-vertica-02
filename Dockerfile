@@ -28,6 +28,6 @@ RUN echo "export PATH=/opt/vertica/bin:/opt/vertica/packages/kafka/bin:${PATH}" 
 RUN chown -R dbadmin: /opt/vertica
 
 ADD --chown=root:root ./create_db.sh /opt/vertica/bin/
-ENTRYPOINT ["/opt/vertica/bin/create_db.sh"]
+ENTRYPOINT ["/bin/bash", "/opt/vertica/bin/create_db.sh"]
 
 EXPOSE 5433
